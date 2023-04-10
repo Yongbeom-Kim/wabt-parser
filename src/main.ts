@@ -1,7 +1,10 @@
+/**
+ * Just a file to write demos and run examples on ts-node
+ */
 import { encode } from './binary_writer';
 import { tokenize } from './lexer/lexer';
 import { getIntermediateRepresentation } from './parser/parser';
-import { getTokenTree } from './parser/treeify';
+import { getParseTree } from './parser/parse_tree';
 
 const programAdd = `
 (module
@@ -12,7 +15,6 @@ const programAdd = `
     (export "fn" (func 0))
 )`;
 
-
 const programSub = `
 (module
     (func (param f64) (param f64) (result f64)
@@ -21,7 +23,6 @@ const programSub = `
         f64.sub)
     (export "fn" (func 0))
 )`;
-
 
 const programMul = `
 (module
@@ -42,12 +43,15 @@ const programDiv = `
 )`;
 
 const programs = [programAdd, programSub, programMul, programDiv];
-const encodings = programs.map((program) => encode(getIntermediateRepresentation(getTokenTree(tokenize(program)))));
+const encodings = programs.map((program) => encode(getIntermediateRepresentation(getParseTree(tokenize(program)))));
 const modules = encodings.map((enc) => new WebAssembly.Module(enc));
 const instances = modules.map((inst) => new WebAssembly.Instance(inst));
 
 const [add, sub, mul, div]: ((arg0: number, arg1: number) => number)[]
-    = instances.map((inst) => inst.exports.fn) as ((arg0: number, arg1: number) => number)[];
+  = instances.map((inst) => inst.exports.fn) as ((
+    arg0: number,
+    arg1: number
+  ) => number)[];
 
 console.log(add(2, 1));
 console.log(sub(10, 5));

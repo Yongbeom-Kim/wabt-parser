@@ -5,105 +5,77 @@ import {
   UnfoldedTokenExpression,
   FunctionExpression,
   ModuleExpression,
-  ExportExpression,
 } from '../../src/parser/ir';
 import { getIntermediateRepresentation } from '../../src/parser/parser';
 import { isEqual as isDeepEqual, isEqual } from 'lodash';
 import { expect } from '@jest/globals';
-import {
-  simple_addition_sexpr,
-  simple_addition_stack,
-  nested_addition_stack,
-  nested_addition_sexpr,
-  simple_add_function_no_param_names,
-  simple_function_sexpr_with_param_names,
-  simple_addition_sexpr_without_argument_bracket_fails,
-  export_func_add_by_index,
-} from '../resources/program_fragments';
 import { TokenData } from '../resources/resolved_tokens';
 import { Token } from '../../src/common/token';
-import { module_with_exported_add_function_no_names, module_with_one_simple_add_function_with_param_names } from '../resources/module_program_fragments';
+import {
+  module_with_exported_add_function_no_names,
+  module_with_one_simple_add_function_with_param_names,
+} from '../resources/module_program_fragments';
+import { simple_addition_sexpr_without_argument_bracket_fails } from '../resources/invalid_function_bodies';
 
-test('convert simple_addition_sexpr into ir', () => {
-  const tokenTree = simple_addition_sexpr.tokenTree;
-  const ir = getIntermediateRepresentation(tokenTree);
-  const expectedIR = simple_addition_sexpr.ir!;
+import { validTestCases as tc2 } from '../resources/function_expressions';
+import { irTestCases as tc1 } from '../resources/valid_function_bodies';
+import { validTestCases as tc3 } from '../resources/export_expressions';
+
+describe('get intermediate expression of function body expressions', () => {
+  test.each(tc1)(
+    'test convert function body expressions into ir',
+    (testCase) => {
+      const parseTree = testCase.parseTree!;
+      const ir = getIntermediateRepresentation(parseTree);
+      const expectedIR = testCase.ir!;
+
+      expect(ir)
+        .toEqual(expectedIR);
+    },
+  );
+
+  test('expect simple_addition_sexpr_without_argument_bracket_fails to throw', () => {
+    const testCase = simple_addition_sexpr_without_argument_bracket_fails;
+    const parseTree = testCase.parseTree!;
+    expect(() => getIntermediateRepresentation(parseTree))
+      .toThrow();
+  });
+});
+
+test.each(tc2)('test convert function expressions into ir', (testCase) => {
+  const parseTree = testCase.parseTree!;
+  const ir = getIntermediateRepresentation(parseTree);
+  const expectedIR = testCase.ir!;
 
   expect(ir)
     .toEqual(expectedIR);
 });
 
-test('convert simple_addition_sexpr into ir without argument bracket fails', () => {
-  const tokenTree = simple_addition_sexpr_without_argument_bracket_fails.tokenTree;
-  expect(() => getIntermediateRepresentation(tokenTree))
-    .toThrow();
-});
+test.each(tc3)('test convert export expressions into ir', (testCase) => {
+  const parseTree = testCase.parseTree!;
+  const ir = getIntermediateRepresentation(parseTree);
+  const expectedIR = testCase.ir!;
 
-test('convert simple_addition_stack into ir', () => {
-  const tokenTree = simple_addition_stack.tokenTree;
-  const ir = getIntermediateRepresentation(tokenTree);
-  const expectedIR = simple_addition_stack.ir!;
-  expect(ir)
-    .toEqual(expectedIR);
-});
-
-test('convert nested_addition_stack into ir', () => {
-  const tokenTree = nested_addition_stack.tokenTree;
-  const ir = getIntermediateRepresentation(tokenTree);
-  const expectedIR = nested_addition_stack.ir!;
-  expect(ir)
-    .toEqual(expectedIR);
-});
-
-test('convert nested_addition_sexpr into ir', () => {
-  const tokenTree = nested_addition_sexpr.tokenTree;
-  const ir = getIntermediateRepresentation(tokenTree);
-  const expectedIR = nested_addition_sexpr.ir!;
-  expect(ir)
-    .toEqual(expectedIR);
-});
-
-test('convert simple_function_sexpr_with_param_names into ir', () => {
-  const tokenTree = simple_function_sexpr_with_param_names.tokenTree;
-  const ir = getIntermediateRepresentation(tokenTree);
-  const expectedIR = simple_function_sexpr_with_param_names.ir!;
-  expect(ir)
-    .toEqual(expectedIR);
-});
-
-test('convert simple_add_function_no_param_names into ir', () => {
-  const tokenTree = simple_add_function_no_param_names.tokenTree;
-  const ir = getIntermediateRepresentation(tokenTree);
-  const expectedIR = simple_add_function_no_param_names.ir!;
-  expect(ir)
-    .toEqual(expectedIR);
-});
-
-test('convert export_func_add_by_index into ir', () => {
-  const tokenTree = export_func_add_by_index.tokenTree;
-  const ir = getIntermediateRepresentation(tokenTree);
-  const expectedIR = export_func_add_by_index.ir!;
   expect(ir)
     .toEqual(expectedIR);
 });
 
 test('convert module_with_one_simple_add_function_no_param_names into ir', () => {
-  const tokenTree = module_with_one_simple_add_function_with_param_names.tokenTree;
-  const ir = getIntermediateRepresentation(tokenTree);
+  const parseTree
+    = module_with_one_simple_add_function_with_param_names.parseTree;
+  const ir = getIntermediateRepresentation(parseTree);
   const expectedIR = module_with_one_simple_add_function_with_param_names.ir;
   expect(ir)
     .toEqual(expectedIR);
 });
 
 test('convert module_with_exported_add_function_no_names into ir', () => {
-  const tokenTree = module_with_exported_add_function_no_names.tokenTree;
-  const ir = getIntermediateRepresentation(tokenTree);
+  const parseTree = module_with_exported_add_function_no_names.parseTree;
+  const ir = getIntermediateRepresentation(parseTree);
   const expectedIR = module_with_exported_add_function_no_names.ir;
   expect(ir)
     .toEqual(expectedIR);
 });
-
-
 
 /**
  * Custom equality comparison between tokens/intermediate representations for testing purposes
@@ -134,7 +106,7 @@ function isIREqual(
 
   if (
     lhs instanceof PureUnfoldedTokenExpression
-      && rhs instanceof PureUnfoldedTokenExpression
+    && rhs instanceof PureUnfoldedTokenExpression
   ) {
     return isIREqual(lhs.tokens, rhs.tokens);
   }
@@ -142,7 +114,7 @@ function isIREqual(
   if (lhs instanceof OperationTree && rhs instanceof OperationTree) {
     if (
       !isIREqual(lhs.operator, rhs.operator)
-        || lhs.operands.length !== rhs.operands.length
+      || lhs.operands.length !== rhs.operands.length
     ) {
       return false;
     }
@@ -157,34 +129,32 @@ function isIREqual(
 
   if (
     lhs instanceof UnfoldedTokenExpression
-      && rhs instanceof UnfoldedTokenExpression
+    && rhs instanceof UnfoldedTokenExpression
   ) {
     return isIREqual(lhs.tokens, rhs.tokens);
   }
   if (
     lhs instanceof PureUnfoldedTokenExpression
-      && rhs instanceof PureUnfoldedTokenExpression
+    && rhs instanceof PureUnfoldedTokenExpression
   ) {
     return isIREqual(lhs.tokens, rhs.tokens);
   }
 
-  if (
-    lhs instanceof FunctionExpression
-      && rhs instanceof FunctionExpression
-  ) {
-    return isIREqual(lhs.functionBody.body, rhs.functionBody.body)
-    && isEqual(lhs.functionSignature, rhs.functionSignature);
+  if (lhs instanceof FunctionExpression && rhs instanceof FunctionExpression) {
+    return (
+      isIREqual(lhs.functionBody.body, rhs.functionBody.body)
+      && isEqual(lhs.functionSignature, rhs.functionSignature)
+    );
   }
 
-  if (
-    lhs instanceof ModuleExpression
-      && rhs instanceof ModuleExpression
-  ) {
+  if (lhs instanceof ModuleExpression && rhs instanceof ModuleExpression) {
     if (lhs.functionDeclarations.length !== rhs.functionDeclarations.length) {
       return false;
     }
     for (let i = 0; i < lhs.functionDeclarations.length; i++) {
-      if (!isIREqual(lhs.functionDeclarations[i], rhs.functionDeclarations[i])) {
+      if (
+        !isIREqual(lhs.functionDeclarations[i], rhs.functionDeclarations[i])
+      ) {
         return false;
       }
     }

@@ -1,8 +1,8 @@
 /* eslint-disable */
+import { assert } from './assert';
 import { Opcode, type OpcodeType } from './opcode';
 
 import { type ValueType } from './type';
-import assert from 'assert';
 export class Token {
   type: TokenType;
   lexeme: string;
@@ -48,8 +48,8 @@ export class Token {
   isOpcodeToken(): boolean {
     return isTokenTypeOpcode(this.type);
   }
-  isOpcodeType(opcodeType: OpcodeType) {
-    return this.isOpcodeToken() && this.opcodeType === opcodeType;
+  isOpcodeType(opcodeType: OpcodeType): boolean {
+    return isTokenTypeOpcode(this.type) && this.opcodeType === opcodeType;
   }
   isLiteral(): boolean {
     return isTokenTypeLiteral(this.type);
@@ -59,11 +59,11 @@ export class Token {
   }
   getOpcodeParamLength(): number {
     assert(this.opcodeType !== null);
-    return Opcode.getParamLength(this.opcodeType);
+    return Opcode.getParamLength(this.opcodeType!);
   }
   getOpcodeEncoding(): number {
     assert(this.opcodeType !== null);
-    return Opcode.getCode(this.opcodeType);
+    return Opcode.getCode(this.opcodeType!);
   }
 }
 export function isTokenTypeBare(token_type: TokenType | null): boolean {

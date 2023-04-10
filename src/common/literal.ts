@@ -1,4 +1,4 @@
-import assert from 'assert';
+import { assert } from './assert';
 
 // eslint-disable-next-line complexity
 export function parseHexdigit(c: string): number {

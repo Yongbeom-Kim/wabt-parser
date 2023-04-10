@@ -1,7 +1,8 @@
+import { assert } from './assert';
 import { Opcode, type OpcodeType } from './opcode';
 import { TokenType } from './token';
 import { type ValueType } from './type';
-import assert from 'assert';
+
 
 export class Token {
   type: TokenType;
@@ -53,6 +54,10 @@ export class Token {
     return isTokenTypeOpcode(this.type);
   }
 
+  isOpcodeType(opcodeType: OpcodeType): boolean {
+    return isTokenTypeOpcode(this.type) && this.opcodeType === opcodeType;
+  }
+
   isLiteral(): boolean {
     return isTokenTypeLiteral(this.type);
   }
@@ -63,12 +68,12 @@ export class Token {
 
   getOpcodeParamLength(): number {
     assert(this.opcodeType !== null);
-    return Opcode.getParamLength(this.opcodeType);
+    return Opcode.getParamLength(this.opcodeType!);
   }
 
   getOpcodeEncoding(): number {
     assert(this.opcodeType !== null);
-    return Opcode.getCode(this.opcodeType);
+    return Opcode.getCode(this.opcodeType!);
   }
 }
 
