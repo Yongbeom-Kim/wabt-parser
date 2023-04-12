@@ -2,10 +2,29 @@
 import { type ValueType } from '../common/type';
 import { Token, TokenType } from '../common/token';
 import { ExportType } from '../common/export_types';
+import { assert } from '../common/assert';
 
-export abstract class IntermediateRepresentation {
-
+/**
+ * Interface indicating that the particular intermediate representation
+ * may contain s-expressions, and can therefore be 'unfolded'.
+ */
+export interface Unfoldable {
+  unfold(): PureUnfoldedTokenExpression;
 }
+
+export namespace Unfoldable {
+  export function instanceOf(obj: object): obj is Unfoldable {
+    return 'unfold' in obj;
+  }
+}
+
+/**
+ * Interface indicating that this particular intermediate representation may store variable declarations
+ * which have to b
+ */
+export interface MayHaveVariables {}
+
+export abstract class IntermediateRepresentation {}
 
 export class ModuleExpression extends IntermediateRepresentation {
   /*
@@ -29,12 +48,17 @@ export class ModuleExpression extends IntermediateRepresentation {
   functionDeclarations: FunctionExpression[] = [];
 
   // Export section
-  exportDeclarations?: ExportExpression; // TODO add support for multiple export expressions
+  exportDeclarations: ExportExpression[] = []; // TODO add support for multiple export expressions
 
-  constructor(functionDeclarations: FunctionExpression[], exportDeclarations?: ExportExpression) {
+  constructor(...childNodes: (FunctionExpression | ExportExpression)[]) {
     super();
-    this.functionDeclarations = functionDeclarations;
-    this.exportDeclarations = exportDeclarations;
+    for (const child of childNodes) {
+      if (child instanceof FunctionExpression) {
+        this.functionDeclarations.push(child);
+      } else if (child instanceof ExportExpression) {
+        this.exportDeclarations.push(child);
+      }
+    }
   }
 
   getFunctionSignatures(): FunctionSignature[] {
@@ -47,34 +71,50 @@ export class ModuleExpression extends IntermediateRepresentation {
 }
 
 export class ExportExpression extends IntermediateRepresentation {
-  exportObjects: ExportObject[];
-
-  constructor(exportObjects: ExportObject[]) {
-    super();
-    this.exportObjects = exportObjects;
-  }
-}
-
-export class ExportObject {
   exportName: string;
   exportType: ExportType;
-  exportIndex: number;
+  exportReferenceIndex: number | null;
+  exportReferenceName: string | null;
 
-  constructor(exportName: Token, exportType: Token, exportIndex: Token) {
+  constructor(exportName: Token, exportType: Token, exportReference: Token) {
+    super();
+    this.exportName = this.getExportName(exportName);
+    this.exportType = this.getExportType(exportType);
+    [this.exportReferenceIndex, this.exportReferenceName]
+      = this.getExportReference(exportReference);
+  }
+
+  private getExportName(exportName: Token) {
     if (exportName.type !== TokenType.Text) {
       throw new Error(`unexpected export name: ${exportName}`); // TODO better errors
     }
-    this.exportName = exportName.lexeme.slice(1, exportName.lexeme.length - 1);
+    return exportName.lexeme.slice(1, exportName.lexeme.length - 1);
+  }
 
-    if (exportIndex.type !== TokenType.Nat) { // TODO implement named exports
-      throw new Error(`unexpected export ID: ${exportIndex}. If this is meant to be a $identifier, then it is not implemented yet.`);
-    }
-    this.exportIndex = Number.parseInt(exportIndex.lexeme);
-
+  private getExportType(exportType: Token) {
     if (exportType.type !== TokenType.Func) {
       throw new Error(`unexpected export type: ${exportType}`); // TODO better errors
     }
-    this.exportType = ExportType.Func;
+    return ExportType.Func;
+  }
+
+  private getExportReference(
+    exportReference: Token,
+  ): [number, null] | [null, string] {
+    switch (exportReference.type) {
+      case TokenType.Nat:
+        return [Number.parseInt(exportReference.lexeme), null];
+      case TokenType.Var:
+        return [null, exportReference.lexeme];
+      default:
+        throw new Error(
+          `unexpected export ID: ${JSON.stringify(
+            exportReference,
+            undefined,
+            2,
+          )}.`,
+        );
+    }
   }
 }
 /*
@@ -88,11 +128,25 @@ FUNCTIONS
 export class FunctionExpression extends IntermediateRepresentation {
   functionSignature: FunctionSignature;
   functionBody: FunctionBody;
-  functionName?: string;
+  functionName?: string | null;
 
-  constructor(paramTypes: ValueType[], returnTypes: ValueType[], paramNames: string[], body: TokenExpression, functionName?: string) {
+  constructor(
+    paramTypes: ValueType[],
+    returnTypes: ValueType[],
+    paramNames: (string | null)[],
+    body: TokenExpression,
+    functionName?: string,
+  ) {
     super();
-    this.functionSignature = new FunctionSignature(paramTypes, returnTypes, paramNames);
+    assert(
+      paramTypes.length === paramNames.length,
+      `Function param types and names must have same length: [${paramTypes}], [${paramNames}]`,
+    );
+    this.functionSignature = new FunctionSignature(
+      paramTypes,
+      returnTypes,
+      paramNames,
+    );
     this.functionBody = new FunctionBody(body, paramNames);
     this.functionName = functionName;
   }
@@ -100,11 +154,16 @@ export class FunctionExpression extends IntermediateRepresentation {
 
 export class FunctionSignature {
   paramTypes: ValueType[];
-  paramNames: string[];
+  paramNames: (string | null)[];
   returnTypes: ValueType[];
   functionName?: string;
 
-  constructor(paramTypes: ValueType[], returnTypes: ValueType[], paramNames: string[], functionName?: string) {
+  constructor(
+    paramTypes: ValueType[],
+    returnTypes: ValueType[],
+    paramNames: (string | null)[],
+    functionName?: string,
+  ) {
     this.paramTypes = paramTypes;
     this.returnTypes = returnTypes;
     this.paramNames = paramNames;
@@ -120,39 +179,29 @@ export class FunctionSignature {
  */
 export class FunctionBody {
   body: TokenExpression;
-  paramNames: string[];
+  paramNames: (string | null)[];
 
-  constructor(body: TokenExpression, paramNames: string[]) {
+  constructor(body: TokenExpression, paramNames: (string | null)[]) {
     this.body = body;
     this.paramNames = paramNames;
   }
 }
 
-
 /*
   EXPRESSION BODIES
 */
 
-export type TokenExpression = OperationTree | UnfoldedTokenExpression;
-
-/**
- * Interface indicating that the particular intermediate representation
- * may contain s-expressions, and can therefore be 'unfolded'.
- */
-export interface Unfoldable {
-  unfold(): PureUnfoldedTokenExpression;
-}
-
-export namespace Unfoldable {
-  export function instanceOf(obj: object): obj is Unfoldable {
-    return 'unfold' in obj;
-  }
-}
+export type TokenExpression =
+  | OperationTree
+  | UnfoldedTokenExpression
+  | EmptyTokenExpression;
 
 /**
  * Class representing operators and operands in an s-expression.
  */
-export class OperationTree extends IntermediateRepresentation implements Unfoldable {
+export class OperationTree
+  extends IntermediateRepresentation
+  implements Unfoldable {
   operator: Token;
   operands: (Token | TokenExpression)[];
 
@@ -171,14 +220,19 @@ export class OperationTree extends IntermediateRepresentation implements Unfolda
       return operand.unfold().tokens;
     });
 
-    return new PureUnfoldedTokenExpression([...unfoldedOperands, this.operator]);
+    return new PureUnfoldedTokenExpression([
+      ...unfoldedOperands,
+      this.operator,
+    ]);
   }
 }
 
 /**
  * Class representing a stack token expression. May have s-expressions inside.
  */
-export class UnfoldedTokenExpression extends IntermediateRepresentation implements Unfoldable {
+export class UnfoldedTokenExpression
+  extends IntermediateRepresentation
+  implements Unfoldable {
   tokens: (Token | OperationTree)[];
 
   constructor(tokens: (Token | OperationTree)[]) {
@@ -195,6 +249,17 @@ export class UnfoldedTokenExpression extends IntermediateRepresentation implemen
     });
 
     return new PureUnfoldedTokenExpression(unfoldedOperands);
+  }
+}
+
+/**
+ * Class to represent an empty token expression
+ */
+export class EmptyTokenExpression
+  extends IntermediateRepresentation
+  implements Unfoldable {
+  unfold(): PureUnfoldedTokenExpression {
+    return new PureUnfoldedTokenExpression([]);
   }
 }
 

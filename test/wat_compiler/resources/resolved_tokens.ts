@@ -1,8 +1,7 @@
-import { assert } from '../../src/common/assert';
-import { OpcodeType } from '../../src/common/opcode';
-import { Token, TokenType } from '../../src/common/token';
-import { ValueType } from '../../src/common/type';
-
+import { assert } from '../../../src/common/assert';
+import { OpcodeType } from '../../../src/common/opcode';
+import { Token, TokenType } from '../../../src/common/token';
+import { ValueType } from '../../../src/common/type';
 
 export interface TokenData {
   type: TokenType;
@@ -13,7 +12,15 @@ export interface TokenData {
 
 export namespace TokenData {
   export function toToken(tokenData: TokenData) {
-    return new Token(tokenData.type, tokenData.lexeme, -1, -1, -1, tokenData.opcodeType, tokenData.valueType);
+    return new Token(
+      tokenData.type,
+      tokenData.lexeme,
+      -1,
+      -1,
+      -1,
+      tokenData.opcodeType,
+      tokenData.valueType,
+    );
   }
   export function fromToken(token: Token): TokenData {
     return {
@@ -24,7 +31,6 @@ export namespace TokenData {
     };
   }
 }
-
 
 namespace TokenObjects {
   export const isNatToken = (lexeme: string) => /^\d+$/u.test(lexeme);
@@ -39,7 +45,9 @@ namespace TokenObjects {
   };
 
   export const isVarToken = (lexeme: string) => /^\$\w+$/u.test(lexeme);
-  export const getVarToken: ((lexeme: string) => TokenData) = (lexeme: string) => {
+  export const getVarToken: (lexeme: string) => TokenData = (
+    lexeme: string,
+  ) => {
     assert(isVarToken(lexeme));
     return {
       type: TokenType.Var,
@@ -50,7 +58,9 @@ namespace TokenObjects {
   };
 
   export const isTextToken = (lexeme: string) => /^"\w+"$/u.test(lexeme);
-  export const getTextToken: ((lexeme: string) => TokenData) = (lexeme: string) => {
+  export const getTextToken: (lexeme: string) => TokenData = (
+    lexeme: string,
+  ) => {
     assert(isTextToken(lexeme));
     return {
       type: TokenType.Text,
@@ -150,7 +160,6 @@ namespace TokenObjects {
     opcodeType: null,
     valueType: null,
   };
-
 }
 const resolvedTokens: Record<string, TokenData> = {
   '(': TokenObjects.LPAR,
@@ -203,8 +212,8 @@ export function getSampleToken(lexeme: string): Token {
 export function hasSameData(lhs: TokenData | Token, rhs: TokenData | Token) {
   return (
     lhs.type === rhs.type
-        && lhs.lexeme === rhs.lexeme
-        && lhs.opcodeType === rhs.opcodeType
-        && lhs.valueType === rhs.valueType
+    && lhs.lexeme === rhs.lexeme
+    && lhs.opcodeType === rhs.opcodeType
+    && lhs.valueType === rhs.valueType
   );
 }

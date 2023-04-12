@@ -1,59 +1,56 @@
 /**
  * Just a file to write demos and run examples on ts-node
  */
-import { encode } from './binary_writer';
-import { tokenize } from './lexer/lexer';
-import { getIntermediateRepresentation } from './parser/parser';
-import { getParseTree } from './parser/parse_tree';
-
-const programAdd = `
+import { compile, parse } from './index';
+const program = `
 (module
-    (func (param f64) (param f64) (result f64)
-        local.get 0
-        local.get 1
-        f64.add)
-    (export "fn" (func 0))
-)`;
+    (func $first_function (param) (result))
+    (func $second_function (param) (result))
+    (export "second" (func $second_function))
+    (export "first" (func $first_function))
+  )
+`;
+// const program = `
+// (module
+//     (func (param f64) (param f64) (result f64)
+//         local.get 0
+//         local.get 1
+//         f64.add)
+//     (func (param f64) (param f64) (result f64)
+//         local.get 0
+//         local.get 1
+//         f64.sub)
+//     (func (param f64) (param f64) (result f64)
+//         local.get 0
+//         local.get 1
+//         f64.mul)
+//     (func (param f64) (param f64) (result f64)
+//         local.get 0
+//         local.get 1
+//         f64.div)
+//     (export "add" (func 0))
+//     (export "sub" (func 1))
+//     (export "mul" (func 2))
+//     (export "div" (func 3))
+// )`;
 
-const programSub = `
-(module
-    (func (param f64) (param f64) (result f64)
-        local.get 0
-        local.get 1
-        f64.sub)
-    (export "fn" (func 0))
-)`;
+const parseTree = compile(program);
+// const encoding = encode(parseTree);
+// const encoding = compile(program);
+// const instance = new WebAssembly.Instance(new WebAssembly.Module(encoding));
+// console.log(instance.exports);
+// const { add, sub, mul, div } = instance.exports;
 
-const programMul = `
-(module
-    (func (param f64) (param f64) (result f64)
-        local.get 0
-        local.get 1
-        f64.mul)
-    (export "fn" (func 0))
-)`;
+// console.log(add);
+// console.log(sub);
+// console.log(mul);
+// console.log(div);
 
-const programDiv = `
-(module
-    (func (param f64) (param f64) (result f64)
-        local.get 0
-        local.get 1
-        f64.div)
-    (export "fn" (func 0))
-)`;
-
-const programs = [programAdd, programSub, programMul, programDiv];
-const encodings = programs.map((program) => encode(getIntermediateRepresentation(getParseTree(tokenize(program)))));
-const modules = encodings.map((enc) => new WebAssembly.Module(enc));
-const instances = modules.map((inst) => new WebAssembly.Instance(inst));
-
-const [add, sub, mul, div]: ((arg0: number, arg1: number) => number)[]
-  = instances.map((inst) => inst.exports.fn) as ((
-    arg0: number,
-    arg1: number
-  ) => number)[];
-
-console.log(add(2, 1));
-console.log(sub(10, 5));
-console.log(div(40, 6));
-console.log(mul(50, 19));
+// // @ts-ignore
+// console.log(add(2, 1));
+// // @ts-ignore
+// console.log(sub(10, 5));
+// // @ts-ignore
+// console.log(div(40, 6));
+// // @ts-ignore
+// console.log(mul(50, 19));
